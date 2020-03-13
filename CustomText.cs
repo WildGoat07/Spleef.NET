@@ -52,7 +52,7 @@ namespace Spleef
                     }
                     max_x = Math.Max(max_x, offset.X);
                 }
-                return new FloatRect(0, 0, max_x, offset.Y + 10);
+                return new FloatRect(0, 0, max_x + Height / 10f, offset.Y + 10);
             }
         }
 
