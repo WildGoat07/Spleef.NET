@@ -11,6 +11,27 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="assets\audio\ost %28in flames%29\burn.ogg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\audio\ost %28in flames%29\call my name.ogg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\audio\ost %28in flames%29\deep inside.ogg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\audio\ost %28in flames%29\house.ogg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\audio\ost %28in flames%29\i am above.ogg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\audio\ost %28in flames%29\i the mask.ogg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="assets\audio\ost %28in flames%29\voices.ogg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="assets\images\colorCursor.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

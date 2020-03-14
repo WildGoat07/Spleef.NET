@@ -2,6 +2,7 @@
 using SFML.Graphics;
 using SFML.System;
 using SFML.Window;
+using SFML.Audio;
 using System.Linq;
 
 namespace Spleef
@@ -9,27 +10,19 @@ namespace Spleef
     internal class Program
     {
         public static RenderWindow App;
-        public static Image Icon = new Image("assets/images/icon.png");
-        public static Texture SparkTexture = new Texture("assets/images/spark.png") { Smooth = true };
-
-        public static bool IsCancelKey(Keyboard.Key key) => new Keyboard.Key[] { Keyboard.Key.Escape, Keyboard.Key.Backspace, Keyboard.Key.A }.Contains(key);
-
-        public static bool IsConfirmKey(Keyboard.Key key) => new Keyboard.Key[] { Keyboard.Key.Enter, Keyboard.Key.Space, Keyboard.Key.E }.Contains(key);
-
-        public static bool IsDownKey(Keyboard.Key key) => new Keyboard.Key[] { Keyboard.Key.Down, Keyboard.Key.S }.Contains(key);
-
-        public static bool IsLeftKey(Keyboard.Key key) => new Keyboard.Key[] { Keyboard.Key.Left, Keyboard.Key.Q }.Contains(key);
-
-        public static bool IsRightKey(Keyboard.Key key) => new Keyboard.Key[] { Keyboard.Key.Right, Keyboard.Key.D }.Contains(key);
-
-        public static bool IsUpKey(Keyboard.Key key) => new Keyboard.Key[] { Keyboard.Key.Up, Keyboard.Key.Z }.Contains(key);
+        public static float DefaultVolume = 50;
+        public static SoundBuffer MainTheme;
+        public static SoundBuffer[] Musics;
+        public static bool SoundEnabled = true;
 
         private static void Main(string[] args)
         {
+            Utilities.InitMusics();
+            var mainMusic = new Sound(MainTheme) { Loop = true, Volume = DefaultVolume };
             App = new RenderWindow(new VideoMode(900, 600), "SPLEEF!", Styles.Close);
             App.SetVerticalSyncEnabled(true);
             App.Closed += (sender, e) => App.Close();
-            App.SetIcon(256, 256, Icon.Pixels);
+            App.SetIcon(256, 256, Utilities.Icon.Pixels);
             var title = new RectangleShape(new Vector2f(43, 26) * 400 / 43) { Texture = new Texture("assets/images/spleef.png") };
             title.Origin = title.Size / 2;
             title.Position = (Vector2f)App.Size / 2;
@@ -40,7 +33,7 @@ namespace Spleef
             var clock = new Clock();
             var darker = true;
             var bgGreen = .6f;
-            var spark = new RectangleShape(new Vector2f(startMessage.LocalBounds.Width, startMessage.LocalBounds.Width)) { Texture = SparkTexture };
+            var spark = new RectangleShape(new Vector2f(startMessage.LocalBounds.Width, startMessage.LocalBounds.Width)) { Texture = Utilities.SparkTexture };
             spark.Origin = spark.Size / 2;
             var shrinker = Transform.Identity;
             shrinker.Translate(startMessage.Position);
@@ -69,6 +62,12 @@ namespace Spleef
                 Position = new Vector2f(450, 450)
             };
             quit.Origin = new Vector2f(quit.LocalBounds.Width / 2, 20);
+            var sound = new CustomText("$")
+            {
+                Height = 40
+            };
+            sound.Position = new Vector2f(900 - sound.LocalBounds.Width, 550);
+            sound.Origin = new Vector2f(sound.LocalBounds.Width / 2, 20);
             CustomText selection = play;
 
             void keyPressed(object sender, KeyEventArgs e)
@@ -80,26 +79,44 @@ namespace Spleef
                 }
                 else
                 {
-                    if (IsUpKey(e.Code))
+                    if (Utilities.IsUpKey(e.Code))
                         if (selection == play)
                             selection = quit;
                         else if (selection == quit)
                             selection = howTo;
                         else if (selection == howTo)
                             selection = play;
-                    if (IsDownKey(e.Code))
+                        else if (selection == sound)
+                            selection = quit;
+                    if (Utilities.IsDownKey(e.Code))
                         if (selection == play)
                             selection = howTo;
                         else if (selection == howTo)
                             selection = quit;
                         else if (selection == quit)
                             selection = play;
-                    if (IsCancelKey(e.Code))
+                        else if (selection == sound)
+                            selection = play;
+                    if (Utilities.IsRightKey(e.Code) || Utilities.IsLeftKey(e.Code))
+                        if (selection == sound)
+                            selection = play;
+                        else
+                            selection = sound;
+                    if (Utilities.IsCancelKey(e.Code))
                         titleTime = true;
-                    if (IsConfirmKey(e.Code))
+                    if (Utilities.IsConfirmKey(e.Code))
                     {
                         if (selection == quit)
                             App.Close();
+                        if (selection == sound)
+                        {
+                            SoundEnabled = !SoundEnabled;
+                            sound.Text = SoundEnabled ? "$" : "£";
+                            if (SoundEnabled)
+                                mainMusic.Play();
+                            else
+                                mainMusic.Pause();
+                        }
                     }
                 }
             }
@@ -112,10 +129,27 @@ namespace Spleef
                 }
                 else
                 {
+                    if (play.GlobalBounds.Contains(App.MapPixelToCoords(e)))
+                        ;
+                    else if (howTo.GlobalBounds.Contains(App.MapPixelToCoords(e)))
+                        ;
+                    else if (quit.GlobalBounds.Contains(App.MapPixelToCoords(e)))
+                        App.Close();
+                    else if (sound.GlobalBounds.Contains(App.MapPixelToCoords(e)))
+                    {
+                        SoundEnabled = !SoundEnabled;
+                        sound.Text = SoundEnabled ? "$" : "£";
+                        if (SoundEnabled)
+                            mainMusic.Play();
+                        else
+                            mainMusic.Pause();
+                    }
                 }
             }
             App.KeyPressed += keyPressed;
             App.MouseButtonPressed += mouseClick;
+
+            mainMusic.Play();
 
             while (App.IsOpen)
             {
@@ -177,18 +211,34 @@ namespace Spleef
                 spark.Rotation = rotation;
                 spark.Scale = selection.Scale;
 
+                if (play.GlobalBounds.Contains(App.MapPixelToCoords(Mouse.GetPosition(App))))
+                    selection = play;
+                if (howTo.GlobalBounds.Contains(App.MapPixelToCoords(Mouse.GetPosition(App))))
+                    selection = howTo;
+                if (quit.GlobalBounds.Contains(App.MapPixelToCoords(Mouse.GetPosition(App))))
+                    selection = quit;
+                if (sound.GlobalBounds.Contains(App.MapPixelToCoords(Mouse.GetPosition(App))))
+                    selection = sound;
                 {
                     play.Scale = new Vector2f(1, 1);
                     howTo.Scale = new Vector2f(1, 1);
                     quit.Scale = new Vector2f(1, 1);
+                    sound.Scale = new Vector2f(1, 1);
+                    play.Color = Color.White;
+                    howTo.Color = Color.White;
+                    quit.Color = Color.White;
                     selection.Scale *= 1.3f;
                     cursor.Position = new Vector2f(selection.GlobalBounds.Left - 10, selection.Position.Y);
                     if (selection == play)
-                        cursor.Color = new Color(0, 255, 132);
+                        cursor.Color = Utilities.Green;
                     else if (selection == howTo)
-                        cursor.Color = new Color(0, 192, 255);
+                        cursor.Color = Utilities.Blue;
                     else if (selection == quit)
-                        cursor.Color = new Color(255, 0, 84);
+                        cursor.Color = Utilities.Red;
+                    else if (selection == sound)
+                        cursor.Color = SoundEnabled ? Utilities.Blue : Utilities.Red;
+                    selection.Color = cursor.Color;
+                    sound.Color = Color.White;
                 }
 
                 App.Clear(new Color(255, (byte)(bgGreen * 255), 0));
@@ -204,6 +254,7 @@ namespace Spleef
                     App.Draw(howTo);
                     App.Draw(quit);
                     App.Draw(cursor);
+                    App.Draw(sound);
                 }
                 App.Draw(title);
 

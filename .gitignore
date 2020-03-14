@@ -348,3 +348,10 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+assets/audio/ost (in flames)/voices.ogg
+assets/audio/ost (in flames)/i the mask.ogg
+assets/audio/ost (in flames)/i am above.ogg
+assets/audio/ost (in flames)/house.ogg
+assets/audio/ost (in flames)/deep inside.ogg
+assets/audio/ost (in flames)/call my name.ogg
+assets/audio/ost (in flames)/burn.ogg
