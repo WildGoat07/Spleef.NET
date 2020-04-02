@@ -43,16 +43,16 @@ namespace Spleef
                     }
                     else if (item == ' ')
                     {
-                        offset.X += Height * 4f / 10;
+                        offset.X += Height * 4f / (FontImage.Size.Y - 1);
                     }
                     else
                     {
                         var texRect = GetCharRect(item);
-                        offset.X += texRect.Width * Height / 10f - Height / 10f;
+                        offset.X += texRect.Width * (float)Height / (FontImage.Size.Y - 1) - (float)Height / (FontImage.Size.Y - 1);
                     }
                     max_x = Math.Max(max_x, offset.X);
                 }
-                return new FloatRect(0, 0, max_x + Height / 10f, offset.Y + Height);
+                return new FloatRect(0, 0, max_x + (float)Height / (FontImage.Size.Y - 1), offset.Y + Height);
             }
         }
 
@@ -72,44 +72,60 @@ namespace Spleef
                 }
                 else if (item == ' ')
                 {
-                    offset.X += Height * 4f / 10;
+                    offset.X += Height * 4f / (FontImage.Size.Y - 1);
                 }
                 else
                 {
                     rect.Position = offset;
                     var texRect = GetCharRect(item);
-                    rect.Size = new Vector2f(texRect.Width * Height / 10f, Height);
+                    rect.Size = new Vector2f(texRect.Width * (float)Height / (FontImage.Size.Y - 1), Height);
                     rect.TextureRect = texRect;
                     target.Draw(rect, states);
-                    offset.X += rect.Size.X - Height / 10f;
+                    offset.X += rect.Size.X - (float)Height / (FontImage.Size.Y - 1);
                 }
             }
         }
 
         private static IntRect GetCharRect(char c)
         {
+            c = char.ToLower(c);
             if ("éèêë".Contains(c))
-                c = 'e';
-            if ("ÉÊËÈ".Contains(c))
                 c = 'e';
             if (c == 'à')
                 c = 'a';
+            if (c == 'î')
+                c = 'i';
+            if (c == 'ï')
+                c = 'i';
+            if (c == 'â')
+                c = 'a';
+            if (c == 'ä')
+                c = 'a';
             if (c == 'ç')
                 c = 'c';
-            c = char.ToLower(c);
+            if (c == 'û')
+                c = 'u';
+            if (c == 'ù')
+                c = 'u';
+            if (c == 'ü')
+                c = 'u';
+            if (c == 'ô')
+                c = 'o';
+            if (c == 'ö')
+                c = 'o';
             var index = "abcdefghijklmnopqrstuvwxyz!?.+-:,$£".IndexOf(c);
             if (index == -1)
                 return default;
             int x = 0;
             while (index >= 0)
             {
-                if (FontImage.GetPixel((uint)x, 10).R == 0)
+                if (FontImage.GetPixel((uint)x, FontImage.Size.Y - 1).R == 0)
                     index--;
                 x++;
             }
-            var result = new IntRect(x - 1, 0, 0, 10);
+            var result = new IntRect(x - 1, 0, 0, (int)FontImage.Size.Y - 1);
             index = x;
-            while (index < FontImage.Size.X && FontImage.GetPixel((uint)index, 10).R == 255)
+            while (index < FontImage.Size.X && FontImage.GetPixel((uint)index, FontImage.Size.Y - 1).R == 255)
                 index++;
             result.Width = index - x + 1;
             return result;
