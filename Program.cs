@@ -10,7 +10,7 @@ namespace Spleef
     internal class Program
     {
         public static RenderWindow App;
-        public static float DefaultVolume = 50;
+        public static float DefaultVolume = 25;
         public static SoundBuffer MainTheme;
         public static SoundBuffer[] Musics;
         public static bool SoundEnabled = true;
