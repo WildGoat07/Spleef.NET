@@ -4,6 +4,8 @@ using SFML.System;
 using SFML.Window;
 using SFML.Audio;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Spleef
 {
@@ -11,14 +13,14 @@ namespace Spleef
     {
         public static RenderWindow App;
         public static float DefaultVolume = 25;
+        public static Random Generator;
         public static SoundBuffer MainTheme;
         public static SoundBuffer[] Musics;
         public static bool SoundEnabled = true;
 
         private static void Main(string[] args)
         {
-            Utilities.InitMusics();
-            var mainMusic = new Sound(MainTheme) { Loop = true, Volume = DefaultVolume };
+            Generator = new Random();
             App = new RenderWindow(new VideoMode(900, 600), "SPLEEF!", Styles.Close);
             App.SetVerticalSyncEnabled(true);
             App.Closed += (sender, e) => App.Close();
@@ -39,6 +41,31 @@ namespace Spleef
             shrinker.Translate(startMessage.Position);
             shrinker.Scale(1.5f, 20f / startMessage.LocalBounds.Width * 2.5f);
             var cursor = new RightCursor(64);
+            {
+                void stopAll(object sender, EventArgs e) => Environment.Exit(0);
+                App.Closed += stopAll;
+                var text = new CustomText("Chargement des musiques...") { Height = 40 };
+                text.Origin = new Vector2f(text.LocalBounds.Width / 2, text.LocalBounds.Height / 2);
+                text.Position = (Vector2f)App.Size / 2;
+                var t = Task.Run(() =>
+                {
+                    //Utilities.InitMusics();
+                    text.Text = "Chargement des textures...";
+                    text.Origin = new Vector2f(text.LocalBounds.Width / 2, text.LocalBounds.Height / 2);
+                    text.Position = (Vector2f)App.Size / 2;
+                    Tile.InitTiles();
+                });
+                while (!t.IsCompleted)
+                {
+                    App.DispatchEvents();
+                    App.Clear(new Color(255, 150, 0));
+                    App.Draw(text);
+                    App.Display();
+                }
+                App.Closed -= stopAll;
+            }
+
+            var mainMusic = new Sound(MainTheme) { Loop = true, Volume = DefaultVolume };
 
             var rotation = 0f;
 
@@ -106,6 +133,8 @@ namespace Spleef
                         titleTime = true;
                     if (Utilities.IsConfirmKey(e.Code))
                     {
+                        if (selection == play)
+                            Game.launch();
                         if (selection == quit)
                             App.Close();
                         if (selection == sound)
@@ -130,7 +159,7 @@ namespace Spleef
                 else
                 {
                     if (play.GlobalBounds.Contains(App.MapPixelToCoords(e)))
-                        ;
+                        Game.launch();
                     else if (howTo.GlobalBounds.Contains(App.MapPixelToCoords(e)))
                         ;
                     else if (quit.GlobalBounds.Contains(App.MapPixelToCoords(e)))
@@ -150,7 +179,7 @@ namespace Spleef
             App.MouseButtonPressed += mouseClick;
 
             mainMusic.Play();
-
+            clock.Restart();
             while (App.IsOpen)
             {
                 App.DispatchEvents();

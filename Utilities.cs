@@ -60,6 +60,66 @@ namespace Spleef
 
         public static Vector2f MapPixelToCoords(this RenderWindow window, MouseMoveEventArgs e, View view) => window.MapPixelToCoords(new Vector2i(e.X, e.Y), view);
 
+        public static Image Multiply(Image left, Image right, params Image[] others)
+        {
+            var res = new Image(left.Size.X, left.Size.Y);
+            for (uint x = 0; x < left.Size.X; x++)
+                for (uint y = 0; y < left.Size.Y; y++)
+                {
+                    var colors = new List<Color>();
+                    colors.Add(left.GetPixel(x, y));
+                    colors.Add(right.GetPixel(x, y));
+                    colors.AddRange(others.Select(i => i.GetPixel(x, y)));
+                    var color = Color.White;
+                    foreach (var c in colors)
+                        color *= c;
+                    res.SetPixel(x, y, color);
+                }
+            return res;
+        }
+
+        public static Image Rotate(this Image img, int times90, IntRect rect = default) => times90 switch
+        {
+            0 => img.SubImage(rect),
+            1 => img.Rotate90(rect),
+            2 => img.Rotate180(rect),
+            3 => img.Rotate270(rect),
+            _ => null
+        };
+
+        public static Image Rotate180(this Image img, IntRect rect = default)
+        {
+            if (rect == default)
+                rect = new IntRect(0, 0, (int)img.Size.X, (int)img.Size.Y);
+            var res = new Image((uint)rect.Width, (uint)rect.Height);
+            for (uint x = 0; x < rect.Width; x++)
+                for (uint y = 0; y < rect.Height; y++)
+                    res.SetPixel(res.Size.X - x - 1, res.Size.Y - y - 1, img.GetPixel((uint)rect.Left + x, (uint)rect.Top + y));
+            return res;
+        }
+
+        public static Image Rotate270(this Image img, IntRect rect = default)
+        {
+            if (rect == default)
+                rect = new IntRect(0, 0, (int)img.Size.X, (int)img.Size.Y);
+            var res = new Image((uint)rect.Width, (uint)rect.Height);
+            for (uint x = 0; x < rect.Width; x++)
+                for (uint y = 0; y < rect.Height; y++)
+                    res.SetPixel(res.Size.X - y - 1, x, img.GetPixel((uint)rect.Left + x, (uint)rect.Top + y));
+            return res;
+        }
+
+        public static Image Rotate90(this Image img, IntRect rect = default)
+        {
+            if (rect == default)
+                rect = new IntRect(0, 0, (int)img.Size.X, (int)img.Size.Y);
+            var res = new Image((uint)rect.Width, (uint)rect.Height);
+            for (uint x = 0; x < rect.Width; x++)
+                for (uint y = 0; y < rect.Height; y++)
+                    res.SetPixel(y, res.Size.Y - x - 1, img.GetPixel((uint)rect.Left + x, (uint)rect.Top + y));
+            return res;
+        }
+
         public static ICollection<T> Shuffle<T>(this ICollection<T> collection)
         {
             var copy = collection.ToList();
@@ -72,6 +132,17 @@ namespace Spleef
                 copy.RemoveAt(index);
             }
             return list;
+        }
+
+        public static Image SubImage(this Image img, IntRect rect)
+        {
+            if (rect == default)
+                rect = new IntRect(0, 0, (int)img.Size.X, (int)img.Size.Y);
+            var res = new Image((uint)rect.Width, (uint)rect.Height);
+            for (uint x = 0; x < rect.Width; x++)
+                for (uint y = 0; y < rect.Height; y++)
+                    res.SetPixel(x, y, img.GetPixel((uint)rect.Left + x, (uint)rect.Top + y));
+            return res;
         }
     }
 }
