@@ -11,7 +11,10 @@ namespace Spleef
 {
     public static class Game
     {
+        public static Texture ennemyTexture = new Texture("assets/images/ennemy.png");
         public static RenderTexture LightMap;
+        public static Miner player;
+        public static Texture playerTexture = new Texture("assets/images/miner.png");
         public static RenderWindow App => Program.App;
         public static Random Generator => Program.Generator;
 
@@ -42,7 +45,12 @@ namespace Spleef
             for (int x = 0; x < 40; x++)
                 for (int y = 28; y < 30; y++)
                     tiles[x, y].type = Tile.LAVA;
-
+            {
+                int nbHoles = Generator.Next(20);
+                for (int i = 0; i < nbHoles; i++)
+                    tiles[Generator.Next(40), Generator.Next(30)].type = Tile.LAVA;
+            }
+            void updateTiles(bool randomize)
             {
                 const int TOP = 1;
                 const int LEFT = 1 << 1;
@@ -83,30 +91,33 @@ namespace Spleef
                             if (borders == (BOT | RIGHT))
                                 tiles[x, y].type = Tile.CORNER_BOTRIGHT;
                             if (borders == (BOT | RIGHT | TOP))
-                                tiles[x, y].type = Tile.TRIBORDER_LEFT;
-                            if (borders == (BOT | LEFT | TOP))
                                 tiles[x, y].type = Tile.TRIBORDER_RIGHT;
+                            if (borders == (BOT | LEFT | TOP))
+                                tiles[x, y].type = Tile.TRIBORDER_LEFT;
                             if (borders == (RIGHT | LEFT | TOP))
-                                tiles[x, y].type = Tile.TRIBORDER_BOT;
-                            if (borders == (RIGHT | LEFT | BOT))
                                 tiles[x, y].type = Tile.TRIBORDER_TOP;
+                            if (borders == (RIGHT | LEFT | BOT))
+                                tiles[x, y].type = Tile.TRIBORDER_BOT;
                             if (borders == 0b1111)
                                 tiles[x, y].type = Tile.ISLE;
                         }
-                        tiles[x, y].version = Generator.Next(Tile.TilesTextures[tiles[x, y].type].Count);
+                        if (randomize)
+                            tiles[x, y].version = Generator.Next(Tile.TilesTextures[tiles[x, y].type].Count);
                     }
             }
+            updateTiles(true);
             var multStates = RenderStates.Default;
             multStates.BlendMode = BlendMode.Multiply;
             var addStates = RenderStates.Default;
             addStates.BlendMode = BlendMode.Add;
             var dummyShape = new VertexArray(PrimitiveType.TriangleFan, 10);
-            var clock = new Clock();
             var lightOpacity = 1f;
             var delta = Time.Zero;
-            var oldTimer = Time.Zero;
+            var lightTimer = Time.Zero;
+            var dummyTimer = Time.Zero;
             var gameView = new View(App.GetView());
             var viewObjective = new Vector2f();
+            player = new Miner(false);
             void mouseClick(object sender, MouseButtonEventArgs e)
             {
                 if (e.Button == Mouse.Button.Right)
@@ -126,15 +137,63 @@ namespace Spleef
             }
             App.MouseButtonPressed += mouseClick;
             App.MouseButtonReleased += mouseRelease;
+            player.Position = new Vector2f(2 * 64, 2 * 64);
+            gameView.Center = player.Position;
+            void updateBreakState()
+            {
+                for (int x = 2; x < 38; x++)
+                    for (int y = 2; y < 28; y++)
+                    {
+                        var current = tiles[x, y];
+                        if (current.type != Tile.LAVA)
+                        {
+                            if (current.breakState == 3)
+                            {
+                                current.type = Tile.LAVA;
+                                current.version = 0;
+                                current.breakState = 0;
+                                continue;
+                            }
+                            if (current.breakState > 0)
+                                current.breakState++;
+                            if (current.breakState == 0)
+                            {
+                                if (tiles[x - 1, y].type == Tile.LAVA)
+                                    current.erosionLevel++;
+                                if (tiles[x + 1, y].type == Tile.LAVA)
+                                    current.erosionLevel++;
+                                if (tiles[x, y - 1].type == Tile.LAVA)
+                                    current.erosionLevel++;
+                                if (tiles[x, y + 1].type == Tile.LAVA)
+                                    current.erosionLevel++;
+                                if (current.erosionLevel >= 4)
+                                {
+                                    current.breakState = 1;
+                                    current.version = Generator.Next(Tile.TilesTextures[current.type].Count);
+                                }
+                            }
+                        }
+                    }
+                updateTiles(false);
+            }
+            var clock = new Clock();
             while (App.IsOpen)
             {
                 delta = clock.Restart();
-                oldTimer += delta;
+                lightTimer += delta;
+                dummyTimer += delta;
                 App.DispatchEvents();
-                if (oldTimer > Time.FromMilliseconds(120))
+                player.Update(delta);
+                viewObjective = player.Position;
+                if (lightTimer > Time.FromMilliseconds(120))
                 {
-                    oldTimer = Time.Zero;
+                    lightTimer = Time.Zero;
                     lightOpacity = .8f + (float)Generator.NextDouble() * .2f;
+                }
+                if (dummyTimer > Time.FromSeconds(1))
+                {
+                    updateBreakState();
+                    dummyTimer = Time.Zero;
                 }
                 if (Mouse.IsButtonPressed(Mouse.Button.Right))
                 {
@@ -203,6 +262,7 @@ namespace Spleef
                     }
 
                 LightMap.Display();
+                App.Draw(player);
                 App.SetView(App.DefaultView);
                 App.Draw(new Sprite(LightMap.Texture), multStates);
                 App.SetView(gameView);
