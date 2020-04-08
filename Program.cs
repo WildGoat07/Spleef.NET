@@ -23,6 +23,7 @@ namespace Spleef
             Generator = new Random();
             App = new RenderWindow(new VideoMode(900, 600), "SPLEEF!", Styles.Close);
             App.SetVerticalSyncEnabled(true);
+            Game.LightMap = new RenderTexture(900, 600);
             App.Closed += (sender, e) => App.Close();
             App.SetIcon(256, 256, Utilities.Icon.Pixels);
             var title = new RectangleShape(new Vector2f(43, 26) * 400 / 43) { Texture = new Texture("assets/images/spleef.png") };
@@ -47,6 +48,10 @@ namespace Spleef
                 var text = new CustomText("Chargement des musiques...") { Height = 40 };
                 text.Origin = new Vector2f(text.LocalBounds.Width / 2, text.LocalBounds.Height / 2);
                 text.Position = (Vector2f)App.Size / 2;
+                var icon = new RectangleShape(new Vector2f(64, 64)) { Texture = new Texture("assets/images/icon.png") };
+                icon.Origin = icon.Size / 2;
+                icon.Position = (Vector2f)App.Size - new Vector2f(50, 50);
+                var subClock = new Clock();
                 var t = Task.Run(() =>
                 {
                     //Utilities.InitMusics();
@@ -57,9 +62,12 @@ namespace Spleef
                 });
                 while (!t.IsCompleted)
                 {
+                    var delta = subClock.Restart();
                     App.DispatchEvents();
+                    icon.Rotation += delta.AsSeconds() * 90;
                     App.Clear(new Color(255, 150, 0));
                     App.Draw(text);
+                    App.Draw(icon);
                     App.Display();
                 }
                 App.Closed -= stopAll;
@@ -134,7 +142,17 @@ namespace Spleef
                     if (Utilities.IsConfirmKey(e.Code))
                     {
                         if (selection == play)
+                        {
+                            App.KeyPressed -= keyPressed;
+                            App.MouseButtonPressed -= mouseClick;
+                            if (SoundEnabled)
+                                mainMusic.Pause();
                             Game.launch();
+                            if (SoundEnabled)
+                                mainMusic.Play();
+                            App.KeyPressed += keyPressed;
+                            App.MouseButtonPressed += mouseClick;
+                        }
                         if (selection == quit)
                             App.Close();
                         if (selection == sound)
@@ -159,7 +177,17 @@ namespace Spleef
                 else
                 {
                     if (play.GlobalBounds.Contains(App.MapPixelToCoords(e)))
+                    {
+                        App.KeyPressed -= keyPressed;
+                        App.MouseButtonPressed -= mouseClick;
+                        if (SoundEnabled)
+                            mainMusic.Pause();
                         Game.launch();
+                        if (SoundEnabled)
+                            mainMusic.Play();
+                        App.KeyPressed += keyPressed;
+                        App.MouseButtonPressed += mouseClick;
+                    }
                     else if (howTo.GlobalBounds.Contains(App.MapPixelToCoords(e)))
                         ;
                     else if (quit.GlobalBounds.Contains(App.MapPixelToCoords(e)))

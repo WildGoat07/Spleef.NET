@@ -23,6 +23,11 @@ namespace Spleef
 
         public static bool Contains(this FloatRect rect, Vector2f vector) => rect.Contains(vector.X, vector.Y);
 
+        public static Image GenerateMask(this Image img, IntRect rect = default) => Modify(img, (x, y, c) => new Color(
+            (byte)(255 - c.A),
+            (byte)(255 - c.A),
+            (byte)(255 - c.A)), rect);
+
         public static void InitMusics()
         {
             try
@@ -60,6 +65,18 @@ namespace Spleef
 
         public static Vector2f MapPixelToCoords(this RenderWindow window, MouseMoveEventArgs e, View view) => window.MapPixelToCoords(new Vector2i(e.X, e.Y), view);
 
+        public static Image Modify(this Image img, Func<int, int, Color, Color> fct, IntRect rect = default)
+        {
+            if (rect == default)
+                rect = new IntRect(0, 0, (int)img.Size.X, (int)img.Size.Y);
+
+            var res = new Image(img);
+            for (uint x = 0; x < res.Size.X; x++)
+                for (uint y = 0; y < res.Size.Y; y++)
+                    res.SetPixel(x, y, fct((int)x, (int)y, res.GetPixel(x, y)));
+            return res;
+        }
+
         public static Image Multiply(Image left, Image right, params Image[] others)
         {
             var res = new Image(left.Size.X, left.Size.Y);
@@ -78,13 +95,12 @@ namespace Spleef
             return res;
         }
 
-        public static Image Rotate(this Image img, int times90, IntRect rect = default) => times90 switch
+        public static Image Rotate(this Image img, int times90, IntRect rect = default) => (times90 % 4) switch
         {
             0 => img.SubImage(rect),
             1 => img.Rotate90(rect),
             2 => img.Rotate180(rect),
-            3 => img.Rotate270(rect),
-            _ => null
+            3 => img.Rotate270(rect)
         };
 
         public static Image Rotate180(this Image img, IntRect rect = default)
