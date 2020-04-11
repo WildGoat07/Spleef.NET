@@ -110,7 +110,7 @@ namespace Spleef
             multStates.BlendMode = BlendMode.Multiply;
             var addStates = RenderStates.Default;
             addStates.BlendMode = BlendMode.Add;
-            var dummyShape = new VertexArray(PrimitiveType.TriangleFan, 10);
+            var dummyShape = new VertexArray(PrimitiveType.TriangleFan, 6);
             var lightOpacity = 1f;
             var delta = Time.Zero;
             var lightTimer = Time.Zero;
@@ -137,7 +137,7 @@ namespace Spleef
             }
             App.MouseButtonPressed += mouseClick;
             App.MouseButtonReleased += mouseRelease;
-            player.Position = new Vector2f(2 * 64, 2 * 64);
+            player.Position = new Vector2f(8 * 64, 8 * 64);
             gameView.Center = player.Position;
             void updateBreakState()
             {
@@ -184,7 +184,7 @@ namespace Spleef
                 dummyTimer += delta;
                 App.DispatchEvents();
                 player.Update(delta);
-                viewObjective = player.Position;
+                viewObjective = player.Position + new Vector2f(32, 32);
                 if (lightTimer > Time.FromMilliseconds(120))
                 {
                     lightTimer = Time.Zero;
@@ -197,7 +197,7 @@ namespace Spleef
                 }
                 if (Mouse.IsButtonPressed(Mouse.Button.Right))
                 {
-                    if (App.MapPixelToCoords(new Vector2i(900, 600)).X - App.MapPixelToCoords(new Vector2i()).X < 900 * 2)
+                    if (App.MapPixelToCoords(new Vector2i(900, 600)).X - App.MapPixelToCoords(new Vector2i()).X < 900 * 1.5f)
                         gameView.Zoom(1 + 5 * delta.AsSeconds());
                     gameView.Move((App.MapPixelToCoords(Mouse.GetPosition(App)) - App.MapPixelToCoords((Vector2i)App.Size / 2)) * -2);
                     Mouse.SetPosition((Vector2i)App.Size / 2, App);
@@ -208,8 +208,8 @@ namespace Spleef
                         gameView.Zoom(1 - 2f * delta.AsSeconds());
                     var toObjective = viewObjective - gameView.Center;
                     var dist = (float)Math.Sqrt(toObjective.X * toObjective.X + toObjective.Y * toObjective.Y);
-                    if (dist > 5)
-                        gameView.Move(toObjective / dist * 5000 * delta.AsSeconds());
+                    if (dist > 10)
+                        gameView.Move(toObjective / dist * Math.Max(5, dist * 10 * delta.AsSeconds()));
                 }
                 Tile.UpdateLava(delta);
 
@@ -243,18 +243,24 @@ namespace Spleef
                 for (int x = (int)visibleBlocks.Left; x < (int)visibleBlocks.Width; x++)
                     for (int y = (int)visibleBlocks.Top; y < (int)visibleBlocks.Height; y++)
                     {
-                        if (tiles[x, y].type == Tile.LAVA)
+                        if (tiles[x, y].type == Tile.LAVA && x > 0 && y > 0 && x < 39 && y < 29)
                         {
-                            dummyShape[0] = new Vertex(new Vector2f(x * 64 + 32, y * 64 + 32), new Color(255, 150, 60));
-                            for (int i = 1; i <= 9; i++)
-                                dummyShape[(uint)i] = new Vertex(new Vector2f(x * 64 + 32, y * 64 + 32) + new Vector2f((float)Math.Cos(i * Math.PI * 2 / 8), (float)Math.Sin(i * Math.PI * 2 / 8)) * 256 * lightOpacity, Color.Black);
-                            LightMap.Draw(dummyShape, addStates);
+                            if (tiles[x + 1, y].type != Tile.LAVA
+                                || tiles[x - 1, y].type != Tile.LAVA
+                                || tiles[x, y + 1].type != Tile.LAVA
+                                || tiles[x, y - 1].type != Tile.LAVA)
+                            {
+                                dummyShape[0] = new Vertex(new Vector2f(x * 64 + 32, y * 64 + 32), new Color(255, 150, 60));
+                                for (int i = 1; i <= 5; i++)
+                                    dummyShape[(uint)i] = new Vertex(new Vector2f(x * 64 + 32, y * 64 + 32) + new Vector2f((float)Math.Cos(i * Math.PI * 2 / 4), (float)Math.Sin(i * Math.PI * 2 / 4)) * 256 * lightOpacity, Color.Black);
+                                LightMap.Draw(dummyShape, addStates);
+                            }
                         }
                         if (((tiles[x, y].type - 1) % 4) == 3)
                         {
                             dummyShape[0] = new Vertex(new Vector2f(x * 64 + 32, y * 64 + 32), new Color(150, 80, 30));
-                            for (int i = 1; i <= 9; i++)
-                                dummyShape[(uint)i] = new Vertex(new Vector2f(x * 64 + 32, y * 64 + 32) + new Vector2f((float)Math.Cos(i * Math.PI * 2 / 8), (float)Math.Sin(i * Math.PI * 2 / 8)) * 94 * lightOpacity, Color.Black);
+                            for (int i = 1; i <= 5; i++)
+                                dummyShape[(uint)i] = new Vertex(new Vector2f(x * 64 + 32, y * 64 + 32) + new Vector2f((float)Math.Cos(i * Math.PI * 2 / 4), (float)Math.Sin(i * Math.PI * 2 / 4)) * 94 * lightOpacity, Color.Black);
                             LightMap.Draw(dummyShape, addStates);
                         }
                         Tile.Draw(App, tiles[x, y].type + tiles[x, y].breakState, new Vector2f(x * Tile.TILE_SIZE, y * Tile.TILE_SIZE), tiles[x, y].version, tiles[x, y].lavaVersion);
