@@ -113,7 +113,7 @@ namespace Spleef
                 c = 'o';
             if (c == 'ö')
                 c = 'o';
-            var index = "abcdefghijklmnopqrstuvwxyz!?.+-:,$£".IndexOf(c);
+            var index = "abcdefghijklmnopqrstuvwxyz!?.+-:,$£0123456789".IndexOf(c);
             if (index == -1)
                 return default;
             int x = 0;
