@@ -119,6 +119,12 @@ namespace Spleef
             var gameView = new View(App.GetView());
             var viewObjective = new Vector2f();
             player = new Miner(false);
+            var stage = 0;
+            do
+                player.Position = new Vector2f((Generator.Next(38)) << 6, (Generator.Next(28)) << 6);
+            while (tiles[(int)player.Position.X >> 6, (int)player.Position.Y >> 6].type == Tile.LAVA);
+
+            var selectedBloc = player.Position;
             void mouseClick(object sender, MouseButtonEventArgs e)
             {
                 if (e.Button == Mouse.Button.Right)
@@ -126,6 +132,16 @@ namespace Spleef
                     App.SetMouseCursorGrabbed(true);
                     App.SetMouseCursorVisible(false);
                     Mouse.SetPosition((Vector2i)App.Size / 2, App);
+                }
+                if (e.Button == Mouse.Button.Left)
+                {
+                    if (stage == 0)
+                    {
+                        var mousePos = App.MapPixelToCoords(e);
+                        int x = (int)mousePos.X >> 6;
+                        int y = (int)mousePos.Y >> 6;
+                        selectedBloc = new Vector2f(x << 6, y << 6);
+                    }
                 }
             }
             void mouseRelease(object sender, MouseButtonEventArgs e)
@@ -136,11 +152,10 @@ namespace Spleef
                     App.SetMouseCursorVisible(true);
                 }
             }
-            var stage = 0;
-            player.Position = new Vector2f(8 * 64, 8 * 64);
-            var selectedBloc = player.Position;
             var movementAvailable = 0;
             var stage2Clock = new Clock();
+            var stage3Clock = new Clock();
+            Dictionary<Miner, (Vector2f, Vector2f, int)> EnnemiesDepl = null;
             Vector2f initialStage2PlayerPos = default;
             void keyDown(object sender, KeyEventArgs e)
             {
@@ -154,6 +169,8 @@ namespace Spleef
                         selectedBloc -= new Vector2f(64, 0);
                     if (Utilities.IsRightKey(e.Code))
                         selectedBloc += new Vector2f(64, 0);
+                    if (Utilities.IsCancelKey(e.Code))
+                        selectedBloc = player.Position;
                     selectedBloc.X = Math.Min(39 * 64, selectedBloc.X);
                     selectedBloc.X = Math.Max(0, selectedBloc.X);
                     selectedBloc.Y = Math.Min(29 * 64, selectedBloc.Y);
@@ -217,7 +234,27 @@ namespace Spleef
                         updateSingleBreakState(x, y);
                 updateTiles(false);
             }
+            var ennemies = new List<Miner>();
             var selector = new BlocSelector();
+            for (int i = 0; i < 9; i++)
+            {
+                var ennemy = new Miner(true);
+                bool good;
+                do
+                {
+                    good = true;
+                    ennemy.Position = new Vector2f((Generator.Next(38)) << 6, (Generator.Next(28)) << 6);
+                    if (tiles[(int)ennemy.Position.X >> 6, (int)ennemy.Position.Y >> 6].type == Tile.LAVA)
+                        good = false;
+                    if (player.Position == ennemy.Position)
+                        good = false;
+                    foreach (var other in ennemies)
+                        if (other.Position == ennemy.Position)
+                            good = false;
+                }
+                while (!good);
+                ennemies.Add(ennemy);
+            }
             var clock = new Clock();
             while (App.IsOpen)
             {
@@ -225,12 +262,61 @@ namespace Spleef
                 lightTimer += delta;
                 App.DispatchEvents();
                 player.Update(delta);
+                {
+                    var perc = stage3Clock.ElapsedTime.AsSeconds() / Time.FromMilliseconds(250).AsSeconds();
+                    var height = (float)Math.Sqrt(1 - 2 * Math.Abs(.5f - perc));
+                    foreach (var ennemy in ennemies)
+                    {
+                        ennemy.Update(delta);
+                        if (stage == 2)
+                        {
+                            var initialPos = EnnemiesDepl[ennemy].Item1;
+                            var endPos = EnnemiesDepl[ennemy].Item2;
+                            var movType = EnnemiesDepl[ennemy].Item3;
+                            if (movType == 0)
+                                ennemy.Position = initialPos + perc * (endPos - initialPos) + new Vector2f(0, -height * 16);
+                            else
+                                ennemy.Position = initialPos + perc * (endPos - initialPos) + new Vector2f(0, -height * 48);
+                        }
+                    }
+                }
+                if (stage == 2 && stage3Clock.ElapsedTime > Time.FromMilliseconds(250))
+                {
+                    foreach (var ennemy in ennemies)
+                    {
+                        var endPos = EnnemiesDepl[ennemy].Item2;
+                        var movType = EnnemiesDepl[ennemy].Item3;
+                        ennemy.Position = endPos;
+                        if (movType != 0)
+                        {
+                            tiles[(int)endPos.X >> 6, (int)endPos.Y >> 6].erosionLevel = 4;
+                            updateSingleBreakState((int)endPos.X >> 6, (int)endPos.Y >> 6);
+                            if (tiles[(int)endPos.X >> 6, (int)endPos.Y >> 6].type == Tile.LAVA)
+                            {
+                                updateSingleTile(((int)endPos.X >> 6) - 1, (int)endPos.Y >> 6, false);
+                                updateSingleTile(((int)endPos.X >> 6) + 1, (int)endPos.Y >> 6, false);
+                                updateSingleTile((int)endPos.X >> 6, ((int)endPos.Y >> 6) + 1, false);
+                                updateSingleTile((int)endPos.X >> 6, ((int)endPos.Y >> 6) - 1, false);
+                            }
+                        }
+                    }
+                    stage = 0;
+                }
                 selector.Update(delta);
                 selector.Position = selectedBloc;
                 if (stage == 0)
                 {
                     viewObjective = selectedBloc + new Vector2f(32, 32);
-                    if (selector.Position == player.Position + new Vector2f(64, 0)
+                    bool onEnnemy = false;
+                    foreach (var ennemy in ennemies)
+                        if (selectedBloc == ennemy.Position)
+                        {
+                            onEnnemy = true;
+                            break;
+                        }
+                    if (onEnnemy)
+                        movementAvailable = 2;
+                    else if (selector.Position == player.Position + new Vector2f(64, 0)
                         || selector.Position == player.Position + new Vector2f(-64, 0)
                         || selector.Position == player.Position + new Vector2f(0, 64)
                         || selector.Position == player.Position + new Vector2f(0, -64)
@@ -260,6 +346,62 @@ namespace Spleef
                 }
                 else if (stage == 1)
                 {
+                    void generateEnnemyMoves()
+                    {
+                        EnnemiesDepl = new Dictionary<Miner, (Vector2f, Vector2f, int)>();
+                        foreach (var ennemy in ennemies)
+                        {
+                            var movAvail = new List<(Vector2f, int)>();
+                            {
+                                int x = (int)ennemy.Position.X >> 6;
+                                int y = (int)ennemy.Position.Y >> 6;
+                                if (tiles[x, y].type != Tile.LAVA && tiles[x, y].breakState < 3)
+                                    movAvail.Add((new Vector2f(x << 6, y << 6), 0));
+                                if (tiles[x + 1, y].type != Tile.LAVA && tiles[x + 1, y].breakState < 3)
+                                    movAvail.Add((new Vector2f((x + 1) << 6, y << 6), 0));
+                                if (tiles[x + 2, y].type != Tile.LAVA && tiles[x + 2, y].breakState < 2)
+                                    movAvail.Add((new Vector2f((x + 2) << 6, y << 6), 1));
+                                if (tiles[x - 1, y].type != Tile.LAVA && tiles[x - 1, y].breakState < 3)
+                                    movAvail.Add((new Vector2f((x - 1) << 6, y << 6), 0));
+                                if (tiles[x - 2, y].type != Tile.LAVA && tiles[x - 2, y].breakState < 2)
+                                    movAvail.Add((new Vector2f((x - 2) << 6, y << 6), 1));
+                                if (tiles[x, y + 1].type != Tile.LAVA && tiles[x, y + 1].breakState < 3)
+                                    movAvail.Add((new Vector2f(x << 6, (y + 1) << 6), 0));
+                                if (tiles[x, y + 2].type != Tile.LAVA && tiles[x, y + 2].breakState < 2)
+                                    movAvail.Add((new Vector2f(x << 6, (y + 2) << 6), 1));
+                                if (tiles[x, y - 1].type != Tile.LAVA && tiles[x, y - 1].breakState < 3)
+                                    movAvail.Add((new Vector2f(x << 6, (y - 1) << 6), 0));
+                                if (tiles[x, y - 2].type != Tile.LAVA && tiles[x, y - 2].breakState < 2)
+                                    movAvail.Add((new Vector2f(x << 6, (y - 2) << 6), 1));
+                                for (int i = movAvail.Count - 1; i >= 0; i--)
+                                {
+                                    var move = movAvail[i];
+                                    bool deletThis = false;
+                                    if (move.Item1 == player.Position)
+                                        deletThis = true;
+                                    foreach (var en in EnnemiesDepl)
+                                    {
+                                        if (move.Item1 == en.Value.Item1)
+                                            deletThis = true;
+                                        if (move.Item1 == en.Value.Item2)
+                                            deletThis = true;
+                                    }
+                                    if (deletThis)
+                                        movAvail.Remove(move);
+                                }
+                                if (movAvail.Count > 0)
+                                {
+                                    var rand = Generator.Next(movAvail.Count);
+                                    EnnemiesDepl.Add(ennemy, (ennemy.Position, movAvail[rand].Item1, movAvail[rand].Item2));
+                                }
+                                else
+                                    EnnemiesDepl.Add(ennemy, (ennemy.Position, ennemy.Position, 0));
+                            }
+                            var currTile = tiles[(int)ennemy.Position.X >> 6, (int)ennemy.Position.Y >> 6];
+                            if (currTile.breakState == 0 && currTile.type != Tile.LAVA)
+                                currTile.breakState++;
+                        }
+                    }
                     if (movementAvailable == 0)
                     {
                         if (stage2Clock.ElapsedTime < Time.FromMilliseconds(250))
@@ -271,7 +413,9 @@ namespace Spleef
                         else
                         {
                             player.Position = selectedBloc;
-                            stage = 0;
+                            stage = 2;
+                            stage3Clock.Restart();
+                            generateEnnemyMoves();
                         }
                     }
                     else
@@ -285,7 +429,10 @@ namespace Spleef
                         else
                         {
                             player.Position = selectedBloc;
-                            stage = 0;
+                            stage = 2;
+                            stage3Clock.Restart();
+                            generateEnnemyMoves();
+                            tiles[(int)selectedBloc.X >> 6, (int)selectedBloc.Y >> 6].erosionLevel = 4;
                             updateSingleBreakState((int)selectedBloc.X >> 6, (int)selectedBloc.Y >> 6);
                             if (tiles[(int)selectedBloc.X >> 6, (int)selectedBloc.Y >> 6].type == Tile.LAVA)
                             {
@@ -375,6 +522,8 @@ namespace Spleef
                     }
 
                 LightMap.Display();
+                foreach (var ennemy in ennemies)
+                    App.Draw(ennemy);
                 App.Draw(player);
                 App.SetView(App.DefaultView);
                 App.Draw(new Sprite(LightMap.Texture), multStates);
