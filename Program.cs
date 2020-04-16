@@ -18,6 +18,35 @@ namespace Spleef
         public static SoundBuffer[] Musics;
         public static bool SoundEnabled = true;
 
+        public static void HelpPannel()
+        {
+            var text = new CustomText(
+@"but : survivre le plus longtemps possible.
+
+le terrain se degrade a mesure que la partie avance, evitez de tomber
+dans la lave avant les autres !
+
+a chaque deplacement, vous rendez l'ancienne place instable, qui se
+deteriorera a son tour !
+
+faire un long saut fissure egalement la case ou vous atterissez, donc
+faites attention si vous sautez sur une case deja fissuree !
+
+le dernier en vie gagne la partie.")
+            { Height = 20, Position = new Vector2f(5, 25) };
+            var finish = false;
+            void keyDown(object sender, KeyEventArgs e) => finish = Utilities.IsCancelKey(e.Code) || Utilities.IsConfirmKey(e.Code);
+            App.KeyPressed += keyDown;
+            while (App.IsOpen && !finish)
+            {
+                App.WaitAndDispatchEvents();
+                App.Clear(new Color(255, 150, 0));
+                App.Draw(text);
+                App.Display();
+            }
+            App.KeyPressed -= keyDown;
+        }
+
         private static void Main(string[] args)
         {
             Generator = new Random();
@@ -165,6 +194,15 @@ namespace Spleef
                             else
                                 mainMusic.Pause();
                         }
+                        if (selection == howTo)
+                        {
+                            App.KeyPressed -= keyPressed;
+                            App.MouseButtonPressed -= mouseClick;
+                            HelpPannel();
+                            App.KeyPressed += keyPressed;
+                            App.MouseButtonPressed += mouseClick;
+                            clock.Restart();
+                        }
                     }
                 }
             }
@@ -191,7 +229,14 @@ namespace Spleef
                         clock.Restart();
                     }
                     else if (howTo.GlobalBounds.Contains(App.MapPixelToCoords(e)))
-                        ;
+                    {
+                        App.KeyPressed -= keyPressed;
+                        App.MouseButtonPressed -= mouseClick;
+                        HelpPannel();
+                        App.KeyPressed += keyPressed;
+                        App.MouseButtonPressed += mouseClick;
+                        clock.Restart();
+                    }
                     else if (quit.GlobalBounds.Contains(App.MapPixelToCoords(e)))
                         App.Close();
                     else if (sound.GlobalBounds.Contains(App.MapPixelToCoords(e)))

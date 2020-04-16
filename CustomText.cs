@@ -67,7 +67,7 @@ namespace Spleef
             {
                 if (item == '\n')
                 {
-                    offset.Y += Height;
+                    offset.Y += (int)(Height * 1.2f);
                     offset.X = 0;
                 }
                 else if (item == ' ')
@@ -113,7 +113,7 @@ namespace Spleef
                 c = 'o';
             if (c == 'ö')
                 c = 'o';
-            var index = "abcdefghijklmnopqrstuvwxyz!?.+-:,$£0123456789".IndexOf(c);
+            var index = "abcdefghijklmnopqrstuvwxyz!?.+-:,$£0123456789'".IndexOf(c);
             if (index == -1)
                 return default;
             int x = 0;
