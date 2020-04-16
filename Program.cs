@@ -12,7 +12,7 @@ namespace Spleef
     internal class Program
     {
         public static RenderWindow App;
-        public static float DefaultVolume = 25;
+        public static float DefaultVolume = 10;
         public static Random Generator;
         public static SoundBuffer MainTheme;
         public static SoundBuffer[] Musics;
@@ -54,7 +54,7 @@ namespace Spleef
                 var subClock = new Clock();
                 var t = Task.Run(() =>
                 {
-                    //Utilities.InitMusics();
+                    Utilities.InitMusics();
                     text.Text = "Chargement des textures...";
                     text.Origin = new Vector2f(text.LocalBounds.Width / 2, text.LocalBounds.Height / 2);
                     text.Position = (Vector2f)App.Size / 2;
@@ -152,6 +152,7 @@ namespace Spleef
                                 mainMusic.Play();
                             App.KeyPressed += keyPressed;
                             App.MouseButtonPressed += mouseClick;
+                            clock.Restart();
                         }
                         if (selection == quit)
                             App.Close();
@@ -187,6 +188,7 @@ namespace Spleef
                             mainMusic.Play();
                         App.KeyPressed += keyPressed;
                         App.MouseButtonPressed += mouseClick;
+                        clock.Restart();
                     }
                     else if (howTo.GlobalBounds.Contains(App.MapPixelToCoords(e)))
                         ;

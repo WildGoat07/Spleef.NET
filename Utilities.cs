@@ -30,19 +30,19 @@ namespace Spleef
 
         public static void InitMusics()
         {
+            var list = new List<SoundBuffer>();
             try
             {
                 Program.MainTheme = new SoundBuffer("assets/audio/ost (in flames)/voices.ogg");
-                var list = new List<SoundBuffer>();
                 list.Add(new SoundBuffer("assets/audio/ost (in flames)/burn.ogg"));
                 list.Add(new SoundBuffer("assets/audio/ost (in flames)/call my name.ogg"));
                 list.Add(new SoundBuffer("assets/audio/ost (in flames)/deep inside.ogg"));
                 list.Add(new SoundBuffer("assets/audio/ost (in flames)/i am above.ogg"));
                 list.Add(new SoundBuffer("assets/audio/ost (in flames)/i the mask.ogg"));
                 list.Add(new SoundBuffer("assets/audio/ost (in flames)/house.ogg"));
-                Program.Musics = list.Shuffle().ToArray();
             }
             catch (Exception) { }
+            Program.Musics = list.Shuffle().ToArray();
         }
 
         public static bool IsCancelKey(Keyboard.Key key) => new Keyboard.Key[] { Keyboard.Key.Escape, Keyboard.Key.Backspace, Keyboard.Key.A }.Contains(key);

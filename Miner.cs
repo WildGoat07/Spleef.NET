@@ -25,6 +25,14 @@ namespace Spleef
                 body.Texture = Game.playerTexture;
         }
 
+        public bool Dead { get; private set; }
+
+        public void Die()
+        {
+            Dead = true;
+            body.Texture = Game.ghostTexture;
+        }
+
         public void Draw(RenderTarget target, RenderStates states)
         {
             states.Transform *= Transform;
@@ -40,13 +48,7 @@ namespace Spleef
                 frame %= 4;
                 elapsed = Time.Zero;
             }
-            body.TextureRect = frame switch
-            {
-                0 => new IntRect(0, 0, 32, 64),
-                1 => new IntRect(32, 0, 32, 64),
-                2 => new IntRect(64, 0, 32, 64),
-                3 => new IntRect(96, 0, 32, 64)
-            };
+            body.TextureRect = new IntRect(frame * 32, 0, 32, 64);
         }
     }
 }
