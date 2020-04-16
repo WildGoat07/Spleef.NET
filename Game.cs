@@ -138,6 +138,14 @@ namespace Spleef
             endExit.Position = (Vector2f)App.Size / 2 + new Vector2f(0, 100);
             endExit.Origin = new Vector2f(endExit.GlobalBounds.Width, endExit.GlobalBounds.Height) / 2;
             endCursor.Position = new Vector2f(endExit.GlobalBounds.Left - 10, endExit.Position.Y);
+            var pauseContinue = new CustomText("Continuer") { Height = 40 };
+            pauseContinue.Position = (Vector2f)App.Size / 2 - new Vector2f(0, 50);
+            pauseContinue.Origin = new Vector2f(pauseContinue.GlobalBounds.Width, pauseContinue.GlobalBounds.Height) / 2;
+            var pauseQuit = new CustomText("Quitter") { Height = 40 };
+            pauseQuit.Position = (Vector2f)App.Size / 2 + new Vector2f(0, 50);
+            pauseQuit.Origin = new Vector2f(pauseQuit.GlobalBounds.Width, pauseQuit.GlobalBounds.Height) / 2;
+            CustomText selectedPauseOption = null;
+            var pauseCursor = new RightCursor(64);
             void mouseClick(object sender, MouseButtonEventArgs e)
             {
                 if (e.Button == Mouse.Button.Right)
@@ -158,6 +166,13 @@ namespace Spleef
                     if (stage == 3)
                         if (endExit.GlobalBounds.Contains(App.MapPixelToCoords(e)))
                             keepPlaying = false;
+                    if (stage == 4)
+                    {
+                        if (pauseQuit.GlobalBounds.Contains(App.MapPixelToCoords(e)))
+                            keepPlaying = false;
+                        if (pauseContinue.GlobalBounds.Contains(App.MapPixelToCoords(e)))
+                            stage = 0;
+                    }
                 }
             }
             void mouseRelease(object sender, MouseButtonEventArgs e)
@@ -185,8 +200,13 @@ namespace Spleef
                         selectedBloc -= new Vector2f(64, 0);
                     if (Utilities.IsRightKey(e.Code))
                         selectedBloc += new Vector2f(64, 0);
-                    if (Utilities.IsCancelKey(e.Code))
+                    if (Utilities.IsCancelKey(e.Code) && e.Code != Keyboard.Key.Escape)
                         selectedBloc = player.Position;
+                    if (e.Code == Keyboard.Key.Escape)
+                    {
+                        selectedPauseOption = pauseContinue;
+                        stage = 4;
+                    }
                     selectedBloc.X = Math.Min(39 * 64, selectedBloc.X);
                     selectedBloc.X = Math.Max(0, selectedBloc.X);
                     selectedBloc.Y = Math.Min(29 * 64, selectedBloc.Y);
@@ -202,9 +222,25 @@ namespace Spleef
                             currTile.breakState++;
                     }
                 }
-                if (stage == 3)
+                else if (stage == 3)
+                {
                     if (Utilities.IsConfirmKey(e.Code))
                         keepPlaying = false;
+                }
+                else if (stage == 4)
+                {
+                    if (Utilities.IsUpKey(e.Code) || Utilities.IsDownKey(e.Code))
+                        selectedPauseOption = selectedPauseOption == pauseContinue ? pauseQuit : pauseContinue;
+                    if (Utilities.IsCancelKey(e.Code))
+                        stage = 0;
+                    if (Utilities.IsConfirmKey(e.Code))
+                    {
+                        if (selectedPauseOption == pauseContinue)
+                            stage = 0;
+                        else
+                            keepPlaying = false;
+                    }
+                }
             }
             App.MouseButtonPressed += mouseClick;
             App.MouseButtonReleased += mouseRelease;
@@ -274,6 +310,7 @@ namespace Spleef
                 while (!good);
                 ennemies.Add(ennemy);
             }
+            var ennemiesPlaying = new CustomText { Height = 20 };
             music.Play();
             var clock = new Clock();
             while (App.IsOpen && keepPlaying)
@@ -300,6 +337,26 @@ namespace Spleef
                         }
                     }
                 }
+                if (stage == 4)
+                {
+                    if (pauseQuit.GlobalBounds.Contains(App.MapPixelToCoords(Mouse.GetPosition(App))))
+                        selectedPauseOption = pauseQuit;
+                    if (pauseContinue.GlobalBounds.Contains(App.MapPixelToCoords(Mouse.GetPosition(App))))
+                        selectedPauseOption = pauseContinue;
+                    if (selectedPauseOption == pauseContinue)
+                    {
+                        pauseContinue.Color = Utilities.Green;
+                        pauseQuit.Color = Color.White;
+                    }
+                    else
+                    {
+                        pauseQuit.Color = Utilities.Red;
+                        pauseContinue.Color = Color.White;
+                    }
+                    pauseCursor.Color = selectedPauseOption.Color;
+                    pauseCursor.Position = new Vector2f(selectedPauseOption.GlobalBounds.Left - 5, selectedPauseOption.Position.Y);
+                }
+                ennemiesPlaying.Text = "Ennemis restant : " + ennemies.Where(m => !m.Dead).Count();
                 if (stage == 2 && stage3Clock.ElapsedTime > Time.FromMilliseconds(250))
                 {
                     foreach (var ennemy in ennemies)
@@ -584,6 +641,13 @@ namespace Spleef
                 App.Draw(player);
                 App.SetView(App.DefaultView);
                 App.Draw(new Sprite(LightMap.Texture), multStates);
+                App.Draw(ennemiesPlaying);
+                if (stage == 4)
+                {
+                    App.Draw(pauseContinue);
+                    App.Draw(pauseQuit);
+                    App.Draw(pauseCursor);
+                }
                 App.SetView(gameView);
                 if (stage == 0)
                     App.Draw(selector);
